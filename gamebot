@@ -1,0 +1,386 @@
+import pyautogui
+from pynput.keyboard import Key, Controller as KeyboardController
+from pynput.mouse import Button, Controller as MouseController
+import time
+import threading
+import pytesseract
+from PIL import ImageGrab, Image
+import re
+
+
+keyboard = KeyboardController()
+mouse = MouseController()
+
+# Set the duration for which the script should run (in seconds)
+run_duration = 14400
+start_time = time.time()
+start_time3 = time.time()
+regionForEenemy = (1115,145,1861,602)
+
+################################################################################
+
+#CAPTCHA SOLVER
+# Specify the Tesseract executable path if not in your PATH environment variable
+pytesseract.pytesseract.tesseract_cmd = r'D:\Program Files\Tesseract-OCR\tesseract.exe'  # Update this path as needed
+
+# Function to capture the entire screen or a specific region
+def capture_screen(region=None):
+    screenshot = ImageGrab.grab(bbox=region)  # Capture the entire screen or the specified region
+    return screenshot
+
+# Function to perform OCR on an image and extract text
+def extract_text_from_image(image_path, scale_factor=2):
+    # Open the image file
+    image = Image.open(image_path)
+    
+    # Resize the image to make it larger
+    width, height = image.size
+    new_size = (int(width * scale_factor), int(height * scale_factor))
+    image = image.resize(new_size, Image.LANCZOS)
+    
+    # Extract text from the resized image
+    text = pytesseract.image_to_string(image)
+    
+    # Replace occurrences of 's' or 'S' with '5'
+    cleaned_text = re.sub(r'[sS]', '5', text)
+    
+    # Replace "44" with "4"
+    cleaned_text = re.sub(r'44', '4', cleaned_text)
+    
+    # Replace occurrences of 'F' or 'f' with '7'
+    cleaned_text = re.sub(r'[Ff]', '7', cleaned_text)
+    
+    # Remove all alphabets (both uppercase and lowercase)
+    cleaned_text = re.sub(r'[a-zA-Z]', '', cleaned_text)
+    
+    return cleaned_text
+
+
+def calculate_sum_of_expression(expression):
+    # Use regex to find numbers and operators
+    match = re.match(r'(\d+)\s*\+\s*(\d+)', expression)
+    if match:
+        first_number = int(match.group(1))
+        second_number = int(match.group(2))
+        return first_number + second_number
+    else:
+        return None
+
+#########################Onscreen Locator##################################
+
+bapsLocation = (1073, 98, 1159, 142)
+mh = "mh.png"
+inspire = "inspire.png"
+
+captchaLocation = (1303, 321, 1641, 422)
+captcha_image = "okcapt.png"
+
+refinesLocation = (1033, 90, 1911, 587)
+burr = "burr.png"
+protpot = "protectionp.png"
+fineburr = "fineburr.png"
+lux = "lux.png"
+
+
+def imageLocator(bapsimage,imagelocation):
+    try:
+        location = pyautogui.locateOnScreen(bapsimage, confidence=0.8,region=imagelocation)
+        return location
+    except pyautogui.ImageNotFoundException:
+        return None
+
+
+########################### Enemy locator #######################
+
+def enemy_location(image_path, confidence=0.8):
+    try:
+        #location = pyautogui.locateCenterOnScreen(image_path, confidence=confidence, region=regionForEenemy)
+        x,y = pyautogui.locateCenterOnScreen(image_path, confidence=confidence, region=regionForEenemy)
+        pyautogui.moveTo(x,y)
+        mouse.press(Button.right)  
+        time.sleep(0.5)
+        mouse.release(Button.right)
+        time.sleep(0.5)
+        return x,y
+    except pyautogui.ImageNotFoundException:
+        return None
+    
+####################################################### 3#########################
+#FOR MAP COORDINATES
+coordinates = [
+
+    #room coordinates
+     (1615, 498),
+     (1666, 482),
+     (1648, 428),
+     (1675, 351),
+     (1678, 301),
+     (1646, 246),
+     (1613, 362),
+     (1645, 411)  
+]
+
+coordinate_index = 0
+
+def sequenceMap():
+
+    global coordinate_index
+    
+    keyboard.press('m')
+    time.sleep(0.1)
+    keyboard.release('m')
+    
+    # Move to the next coordinate in the list
+    current_coordinate = coordinates[coordinate_index]
+    pyautogui.moveTo(current_coordinate[0], current_coordinate[1])
+    
+    mouse.press(Button.left)
+    time.sleep(0.1)
+    mouse.release(Button.left)
+    
+    keyboard.press('m')
+    time.sleep(0.1)
+    keyboard.release('m')
+
+    print(f"Current coordinate: {current_coordinate}")
+    # Update the index to the next coordinate
+    coordinate_index = (coordinate_index + 1) % len(coordinates)
+  
+################################################################################
+
+
+def autoCaptcha():
+        time.sleep(3)
+        ##region = (1267, 391, 1314, 411)  # SAMPLE:
+        region = (1542, 326, 1590, 345)  # ORIG:
+        # Capture the screen
+        image = capture_screen(region)
+    
+        # Save the screenshotpidol123   09770236446
+        screenshot_path = 'screenshot.png'
+        image.save(screenshot_path)
+    
+        # Extract text from the image
+        text = extract_text_from_image(screenshot_path)
+        print(f"Extracted Text: {text}")
+        if text == "":
+            print("text is empty")
+            exit
+        if text:
+        # Modify the extracted text (calculate sum of the two numbers in the expression)
+            modified_text = calculate_sum_of_expression(text.strip())
+            if modified_text is not None:
+                print(f"Sum of the expression: {modified_text}")
+
+                pyautogui.moveTo(1374,402)
+                pyautogui.mouseDown()
+                time.sleep(0.2)
+                pyautogui.mouseUp()
+
+                # Type 5 backspaces
+                for _ in range(20):
+                    pyautogui.press('backspace')
+
+                time.sleep(0.2)  # Small delay before typing
+                # Type the text (modified_text)
+                pyautogui.write(str(modified_text))
+                time.sleep(0.2)
+                
+                pyautogui.moveTo(1489,402)
+                time.sleep(0.2)
+                pyautogui.mouseDown()
+                pyautogui.mouseUp()
+            else:
+                print("The text did not contain a valid expression.")
+        else:
+            print("captcha not found.")
+
+  #THREADS 2
+  #refines
+def lootRefines():
+     while True: 
+         burrs = imageLocator(burr,refinesLocation)
+         protpots = imageLocator(protpot,refinesLocation)
+         fburr = imageLocator(fineburr,refinesLocation)
+         luxury = imageLocator(lux,refinesLocation)
+         if burrs or luxury or protpots or fburr:
+             print("+++++++++++++++Found Refines++++++++++++++++")    
+             for _ in range(5):
+                 keyboard.press(Key.space)
+                 time.sleep(0.1)
+                 keyboard.release(Key.space)
+
+    #skill keys
+    # Event flag to control thread execution
+pause_event = threading.Event()
+
+def press_keys_in_sequence():
+    while True:
+        pause_event.wait()  # Wait until the event is set
+        for key in ['1', '2', '3', '4','1', '2', '3']:
+            keyboard.press(key)
+            time.sleep(0.5)
+            keyboard.release(key)
+            time.sleep(0.5)
+    
+def mh_buffer():
+    while True:
+        pause_event.wait()
+        if imageLocator(mh,bapsLocation) is None: 
+            print("----Buffing MASSIVE HASTE----")
+            keyboard.press('0')
+            time.sleep(0.1)
+            keyboard.release('0')
+            mouse.press(Button.right)
+            time.sleep(0.1)
+            mouse.release(Button.right)
+            time.sleep(15)
+
+def inspire_buffer():
+    while True:
+        pause_event.wait()
+        if imageLocator(inspire,bapsLocation) is None: 
+            print("----Buffing Inspire----")
+            keyboard.press('8')
+            time.sleep(0.1)
+            keyboard.release('8')
+            mouse.press(Button.right)
+            time.sleep(0.1)
+            mouse.release(Button.right)
+            time.sleep(20)
+
+
+# Start the thread
+key_press_thread = threading.Thread(target=press_keys_in_sequence)
+key_press_thread.daemon = True
+key_press_thread.start()
+
+loot_refines = threading.Thread(target=lootRefines)
+loot_refines.daemon = True
+loot_refines.start()
+
+mh_buff = threading.Thread(target=mh_buffer)
+mh_buff.daemon = True
+mh_buff.start()
+
+inspire_buff = threading.Thread(target=inspire_buffer)
+inspire_buff.daemon = True
+inspire_buff.start()
+
+
+pause_event.set()
+#map configuration
+time.sleep(5)
+keyboard.press('m')
+time.sleep(0.1)
+keyboard.release('m')
+pyautogui.moveTo(1589,327)
+pyautogui.mouseDown()
+pyautogui.moveTo(1317,608)
+pyautogui.mouseUp()
+time.sleep(0.2)
+keyboard.press('m')
+time.sleep(0.1)
+keyboard.release('m')
+time.sleep(0.5)
+
+#cleaning screen configuration
+pyautogui.moveTo(1473,51)
+mouse.press(Button.left)
+time.sleep(0.1)
+mouse.release(Button.left)
+time.sleep(0.5)
+pyautogui.moveTo(1052,480)
+mouse.press(Button.left)
+time.sleep(0.1)
+mouse.release(Button.left)
+time.sleep(0.5)
+pyautogui.moveTo(1543,691)
+mouse.press(Button.left)
+time.sleep(0.1)
+mouse.release(Button.left)
+time.sleep(0.5)
+
+pyautogui.moveTo(1043,561)
+pyautogui.mouseDown()
+pyautogui.moveTo(1043,636)
+pyautogui.mouseUp()
+time.sleep(1)
+
+pyautogui.moveTo(1468,413)
+pyautogui.scroll(2000)
+
+time.sleep(2)
+print("Threads Initiliazing....")
+print("Cleaning Map Area....")
+################################################################################
+
+#LOOT FUNCTION
+def lootSpace():
+      for _ in range(3):
+                 keyboard.press(Key.space)
+                 time.sleep(0.1)
+                 keyboard.release(Key.space)
+################################################################################  
+
+#main loop
+while time.time() - start_time < run_duration:
+ 
+    lootSpace()
+
+    mauler = enemy_location("mauler.PNG", confidence=0.8)
+    jr = enemy_location("jr.PNG", confidence=0.8)
+    punk = enemy_location("punk.PNG", confidence=0.8)
+    
+    if imageLocator(captcha_image,captchaLocation):
+         time.sleep(2)
+         pause_event.clear()
+         print("Threads stopping")
+         time.sleep(3)
+         print("processing capchat pause for 15sec")
+         autoCaptcha()
+         time.sleep(3)
+         pause_event.set()
+
+    if mauler or jr or punk:
+        
+        start_time3 = time.time()
+        elapsed_time = 0
+
+        mobs = {
+            "Brute Mauler": mauler,
+            "Jr": jr,
+            "Punk": punk
+        }
+
+        detected_mobs = {name: loc for name, loc in mobs.items() if loc}
+
+        print(f"Target found: {detected_mobs}")
+        continue
+
+
+    if mauler is None and jr is None and  punk is None:
+        elapsed_time = time.time() - start_time3
+        print(f"Elapsed time: {int(elapsed_time)} seconds", end='\r')
+        if elapsed_time >= 3:
+            sequenceMap()
+            start_time3 = time.time()
+            # Reset elapsed_time to 0
+            elapsed_time = 0
+
+    click_move = imageLocator("move.PNG", refinesLocation)
+    if click_move:
+        pyautogui.moveTo(click_move)
+        pyautogui.mouseDown()
+        time.sleep(0.2)
+        pyautogui.mouseUp()
+         
+    stopper = imageLocator("stopper.PNG", refinesLocation)
+    if stopper:
+        print("Stopper found")
+        break
+
+    time.sleep(0.8)
+    
+    # Sleep for a short duration to avoid high CPU usage
+
